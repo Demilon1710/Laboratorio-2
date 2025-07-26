@@ -1,139 +1,100 @@
-//************************ */
 //Universidad del Valle de Guatemala
 //BE3029 - Electrónica Digital 2
 //Javier de León
-//************************* */
-//****************************** */
+
 //Librerías
-//******************************** */
 #include <Arduino.h>
 #include <stdint.h>
 
-//****************************** */
-//Definiciones
-//******************************** */
-#define LED_B 15
-#define LED_Y 2
-#define LED_R 5
-#define LED_O 19
-#define BTNMAS 13
-#define BTNMENOS 12
-#define BTNCONT 27
 
 // put function declarations here:
 
+// Definir pines para leds y botones.
+#define LEDB 15 //Led azul
+#define LEDY 2 //Led amarillo
+#define LEDR 5 //Led rojo
+#define LEDO 19 //Led naranja
+#define BTNS 13 //Botón de suma
+#define BTNR 12 //Botón de resta
 
-uint8_t estadoBTNMAS = 0;
-uint8_t estadoBTNMENOS = 0;
-uint8_t estadoBTNCONT = 0;
-typedef enum estados {s0, s1, s2, s3} estados; //Definición de los estados del sistema
-estados current = s0; //Variable que nombra el estado actual
-estados next = s0; //Variable que nombra el estado siguiente
+// Declarar variables
+int contador = 0; //Contador debe tener un valor para poder cambiar
+bool estadoBTNS;
+bool estadoBTNR;
 
-const long interval = 500; //Nombrar el intervalo para que la luz parpadeé en milisegundos
-unsigned long previousMillis = 0; //Nombrar el periodo de actuación del sistema
-uint8_t num = 0;
+unsigned long antesBTNS = 0; 
+unsigned long antesBTNR = 0; 
+const long intervalo = 500;  
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(BTNMAS, INPUT_PULLUP);
-  pinMode(BTNMENOS, INPUT_PULLDOWN);
-  pinMode(BTNCONT, INPUT);
-  pinMode(LED_B, OUTPUT);
-  pinMode(LED_Y, OUTPUT);
-  pinMode(LED_R, OUTPUT);
-  pinMode(LED_O, OUTPUT);
-
+  // Configurar pines como entradas o salidas
+  pinMode(LEDB, OUTPUT);
+  pinMode(LEDY, OUTPUT);
+  pinMode(LEDR, OUTPUT);
+  pinMode(LEDO, OUTPUT);
+  pinMode(BTNS, INPUT_PULLUP); //al presionarse da un valor LOW en lugar de HIGH, por lo que hay que conectar el botón a Tierra y no a la fuente.
+  pinMode(BTNR, INPUT_PULLDOWN);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  uint8_t suma = digitalRead(BTNMAS);
-  uint8_t resta = digitalRead(BTNMENOS);
-  uint8_t cont = digitalRead(BTNCONT);
-  
+  // Leer el estado de los botones
+  bool btns = digitalRead(BTNS) == HIGH;
+  bool btnr = digitalRead(BTNR) == HIGH;
 
-  //Cambios de estado de acuerdo a las entradas
-  switch(current){
-    //Se detecta un intruso y se cambia al estado s1
-    case s0:
-    if (suma == HIGH) {
-      ++num;
-      next = s1;
-     }if (resta == HIGH){
-      num = 3;
-      next = s3;
-     }else{
-      next = s0;
-     }
-    break;
-    //Se detecta la señal de la segunda máquina en s1, se cambia a s0.
-    case s1:
-      if (suma == HIGH) {
-        ++num;
-        next = s2;
-     }if (resta == HIGH){
-      --num;
-      next = s0;
-     }else{
-      next = s1;
-     }
-    break;
-    case s2:
-      if (suma == HIGH) {
-      ++num;
-      next = s3;
-     }if (resta == HIGH){
-      --num;
-      next = s1;
-     }else{
-      next = s2;
-     }
-    break;
-    case s3:
-      if (suma == HIGH) {
-      num = 0;
-      next = s0;
-     }if (resta == HIGH){
-      --num;
-      next = s2;
-     }else{
-      next = s3;
-     }
-    break;
-  
+  // Incrementar contador si se presiona el botón de suma
+  if (btns && !estadoBTNS && (millis() - antesBTNS) >= intervalo) { //compara el tiempo de espera con el estado anterior del boton para ver si sigue presionado
+    contador++; // Incrementa el valor del contador en 1
+    // Bloque if para crear una serie circular
+    if (contador > 4) {
+      contador = 1; // Volver al principio si se llega a 5
+    }
+    estadoBTNS = true;  // Cambiar el estado del botón suma a presionado
+    antesBTNS = millis();  // Actualizar el tiempo de la última pulsación
   }
-//Salidas de acuerdo al estado actual
-switch(current){
-    case s0:
-      digitalWrite(LED_B, HIGH);
-      digitalWrite(LED_Y, LOW);
-      digitalWrite(LED_R, LOW);
-      digitalWrite(LED_O, LOW);
-    break;
 
-    case s1:
-      digitalWrite(LED_B, LOW);
-      digitalWrite(LED_Y, HIGH);
-      digitalWrite(LED_R, LOW);
-      digitalWrite(LED_O, LOW);
-    break;
+  // Substraer al contador si se presiona el botón resta
+  if (btnr && !estadoBTNR && (millis() - antesBTNR) >= intervalo) {
+    contador--; //Resta el valor actual en 1
+    if (contador < 1) {
+      contador = 4; // Regresa al estado final si llega a 0
+    }
+    estadoBTNR = true;  // Cambiar el estado del botón resta a presionado
+    antesBTNR = millis();  // Actualizar el tiempo de la última pulsación
+  }
 
-    case s2:
-      digitalWrite(LED_B, LOW);
-      digitalWrite(LED_Y, LOW);
-      digitalWrite(LED_R, HIGH);
-      digitalWrite(LED_O, LOW);
-    break;
+  // Restablecer el estado de los botones cuando ya no se presionan
+  if (!btns) {
+    estadoBTNS = false;
+  }
+  if (!btnr) {
+    estadoBTNR = false;
+  }
 
-    case s3:
-      digitalWrite(LED_B, LOW);
-      digitalWrite(LED_Y, LOW);
-      digitalWrite(LED_R, LOW);
-      digitalWrite(LED_O, HIGH);
-    break;
+  // Encender los LEDs según el valor del contador
+  if (contador == 1) {
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  } 
+  else if (contador == 2) {
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  } 
+  else if (contador == 3) {
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, LOW);
+  } 
+  else if (contador == 4) {
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDO, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
 }
 
-}
 
-// put function definitions here:
