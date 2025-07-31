@@ -12,19 +12,20 @@
 // Definir pines para leds y botones.
 #define LEDB 15 //Led azul
 #define LEDY 2 //Led amarillo
-#define LEDR 5 //Led rojo
+#define LEDR 18 //Led rojo
 #define LEDO 19 //Led naranja
-#define BTNS 13 //Botón de suma
-#define BTNR 12 //Botón de resta
+#define BTN1 13 //Boton suma
+#define antiBounce 150 //Milisegundos para antirebote
 
-// Declarar variables
-int contador = 0; //Contador debe tener un valor para poder cambiar
-bool estadoBTNS;
-bool estadoBTNR;
+//Prototipo de funciones
 
-unsigned long antesBTNS = 0; 
-unsigned long antesBTNR = 0; 
-const long intervalo = 500;  
+void botonSuma(void);
+void IRAM_ATTR BTN1_ISR(void);
+
+//Variables globales
+volatile uint32_t contador;
+volatile bool btn1ON;
+volatile uint32_t lastISRbtn1 = 0;
 
 void setup() {
   // Configurar pines como entradas o salidas
@@ -32,69 +33,17 @@ void setup() {
   pinMode(LEDY, OUTPUT);
   pinMode(LEDR, OUTPUT);
   pinMode(LEDO, OUTPUT);
-  pinMode(BTNS, INPUT_PULLUP); //al presionarse da un valor LOW en lugar de HIGH, por lo que hay que conectar el botón a Tierra y no a la fuente.
-  pinMode(BTNR, INPUT_PULLDOWN);
 }
 
 void loop() {
-  // Leer el estado de los botones
-  bool btns = digitalRead(BTNS) == HIGH;
-  bool btnr = digitalRead(BTNR) == HIGH;
-
-  // Incrementar contador si se presiona el botón de suma
-  if (btns && !estadoBTNS && (millis() - antesBTNS) >= intervalo) { //compara el tiempo de espera con el estado anterior del boton para ver si sigue presionado
-    contador++; // Incrementa el valor del contador en 1
-    // Bloque if para crear una serie circular
-    if (contador > 4) {
-      contador = 1; // Volver al principio si se llega a 5
-    }
-    estadoBTNS = true;  // Cambiar el estado del botón suma a presionado
-    antesBTNS = millis();  // Actualizar el tiempo de la última pulsación
-  }
-
-  // Substraer al contador si se presiona el botón resta
-  if (btnr && !estadoBTNR && (millis() - antesBTNR) >= intervalo) {
-    contador--; //Resta el valor actual en 1
-    if (contador < 1) {
-      contador = 4; // Regresa al estado final si llega a 0
-    }
-    estadoBTNR = true;  // Cambiar el estado del botón resta a presionado
-    antesBTNR = millis();  // Actualizar el tiempo de la última pulsación
-  }
-
-  // Restablecer el estado de los botones cuando ya no se presionan
-  if (!btns) {
-    estadoBTNS = false;
-  }
-  if (!btnr) {
-    estadoBTNR = false;
-  }
-
-  // Encender los LEDs según el valor del contador
-  if (contador == 1) {
-    digitalWrite(LEDB, HIGH);
-    digitalWrite(LEDY, LOW);
-    digitalWrite(LEDR, LOW);
-    digitalWrite(LEDO, LOW);
-  } 
-  else if (contador == 2) {
     digitalWrite(LEDB, LOW);
-    digitalWrite(LEDY, HIGH);
-    digitalWrite(LEDR, LOW);
-    digitalWrite(LEDO, LOW);
-  } 
-  else if (contador == 3) {
-    digitalWrite(LEDB, LOW);
-    digitalWrite(LEDY, LOW);
+    digitalWrite (LEDY, LOW);
     digitalWrite(LEDR, HIGH);
-    digitalWrite(LEDO, LOW);
-  } 
-  else if (contador == 4) {
-    digitalWrite(LEDB, LOW);
     digitalWrite(LEDO, HIGH);
-    digitalWrite(LEDR, LOW);
-    digitalWrite(LEDO, LOW);
-  }
-}
+  } 
 
+void botonSuma(void){
+  pinMode (BTN1, INPUT_PULLUP);
+  attachInterrupt(BTN1, &BTN1_ISR, FALLING);
+}
 
