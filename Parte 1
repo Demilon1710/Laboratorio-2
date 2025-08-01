@@ -1,7 +1,3 @@
-//Universidad del Valle de Guatemala
-//BE3029 - Electrónica Digital 2
-//Javier de León
-
 //Librerías
 #include <Arduino.h>
 #include <stdint.h>
@@ -15,20 +11,46 @@
 #define LEDR 18 //Led rojo
 #define LEDO 19 //Led naranja
 #define BTN1 13 //Boton suma
-#define antiBounce 150 //Milisegundos para antirebote
+#define BTN2 12 //Boton resta
+#define antiBounce 300 //Milisegundos para antirebote
 
 //Prototipo de funciones
-
-void botonSuma(void);
+void initBTN1(void);
 void IRAM_ATTR BTN1_ISR(void);
+void initBTN2(void);
+void IRAM_ATTR BTN2_ISR(void);
 
 //Variables globales
 volatile uint32_t contador;
 volatile bool btn1ON;
 volatile uint32_t lastISRbtn1 = 0;
+volatile bool btn2ON;
+volatile uint32_t lastISRbtn2 = 0;
+
+void IRAM_ATTR BTN1_ISR(void){
+  uint32_t tiempoActual = millis();
+  if(tiempoActual - lastISRbtn1 > antiBounce){
+  btn1ON = true;
+  contador++;
+  lastISRbtn1 = tiempoActual;
+  }
+}
+void IRAM_ATTR BTN2_ISR(void){
+  uint32_t tiempoActual = millis();
+  if(tiempoActual - lastISRbtn2 > antiBounce){
+  btn2ON = true;
+  contador--;
+  lastISRbtn2 = tiempoActual;
+  }
+  }
+
 
 void setup() {
   // Configurar pines como entradas o salidas
+  Serial.begin(115200);
+  initBTN1();
+  initBTN2();
+  contador = 1;
   pinMode(LEDB, OUTPUT);
   pinMode(LEDY, OUTPUT);
   pinMode(LEDR, OUTPUT);
@@ -36,14 +58,54 @@ void setup() {
 }
 
 void loop() {
+ if(btn1ON){
+  btn1ON = false;
+  Serial.println("Se ha sumado >");
+  Serial.println(contador);
+   }
+  if(btn2ON){
+    btn2ON = false;
+    Serial.println("Se ha restado >");
+    Serial.println(contador);
+  }
+  if(contador == 1){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 2){
     digitalWrite(LEDB, LOW);
-    digitalWrite (LEDY, LOW);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 3){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
     digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 4){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
     digitalWrite(LEDO, HIGH);
+  }
+  if(contador > 4){
+    contador = 1;
+  }
+  if(contador < 1){
+    contador = 4;
+  }
+  
   } 
 
-void botonSuma(void){
-  pinMode (BTN1, INPUT_PULLUP);
+void initBTN1(void){
+  pinMode(BTN1, INPUT_PULLUP);
   attachInterrupt(BTN1, &BTN1_ISR, FALLING);
 }
-
+void initBTN2(void){
+  pinMode(BTN2, INPUT_PULLDOWN);
+  attachInterrupt(BTN2, &BTN2_ISR, RISING);
+}
