@@ -12,30 +12,36 @@
 #define LEDO 19 //Led naranja
 #define BTN1 13 //Boton suma
 #define BTN2 12 //Boton resta
-#define antiBounce 300 //Milisegundos para antirebote
+#define BTN3 27 //Boton cambio
+#define antiBounce 300 //Milisegundos para antirrebote
 
 //Prototipo de funciones
 void initBTN1(void);
-void IRAM_ATTR BTN1_ISR(void);
+void IRAM_ATTR BTN1_ISR(void); //Funciones para interrupciones de los botones
 void initBTN2(void);
 void IRAM_ATTR BTN2_ISR(void);
+void initBTN3(void);
+void IRAM_ATTR BTN3_ISR(void);
 
 //Variables globales
-volatile uint32_t contador;
-volatile bool btn1ON;
-volatile uint32_t lastISRbtn1 = 0;
+volatile int32_t contador; //Se tomarán en cuenta valores negativos, por lo que son enteros de ambos signos.
+volatile int32_t segundoContador;
+volatile bool btn1ON; //Variable booleana para marcar que se presionó el botón.
+volatile uint32_t lastISRbtn1 = 0; //Última presionada del botón.
 volatile bool btn2ON;
 volatile uint32_t lastISRbtn2 = 0;
+volatile bool btn3ON;
+volatile uint32_t lastISRbtn3 = 0;
 
-void IRAM_ATTR BTN1_ISR(void){
-  uint32_t tiempoActual = millis();
-  if(tiempoActual - lastISRbtn1 > antiBounce){
+void IRAM_ATTR BTN1_ISR(void){ //Función que permite el antirrebote.
+  uint32_t tiempoActual = millis(); //Millis permite contar el tiempo desde el inicio del programa.
+  if(tiempoActual - lastISRbtn1 > antiBounce){ //Ciclo if para sumar al contador si se cumplen las condiciones del interruptor 1
   btn1ON = true;
   contador++;
   lastISRbtn1 = tiempoActual;
   }
 }
-void IRAM_ATTR BTN2_ISR(void){
+void IRAM_ATTR BTN2_ISR(void){ //Ciclo if para restar al contador si se cumplen las condiciones del interruptor 2
   uint32_t tiempoActual = millis();
   if(tiempoActual - lastISRbtn2 > antiBounce){
   btn2ON = true;
@@ -43,30 +49,51 @@ void IRAM_ATTR BTN2_ISR(void){
   lastISRbtn2 = tiempoActual;
   }
   }
-
+void IRAM_ATTR BTN3_ISR(void){ //Ciclo if para sumar al contador si se cumplen las condiciones del interruptor 3
+  uint32_t tiempoActual = millis();
+  if(tiempoActual - lastISRbtn3 > antiBounce){
+  btn3ON = true;
+  segundoContador++;
+  lastISRbtn3 = tiempoActual;
+  }
+  }
 
 void setup() {
   // Configurar pines como entradas o salidas
-  Serial.begin(115200);
-  initBTN1();
+  Serial.begin(115200); //Iniciar la serialización para los comandos de texto.
+  initBTN1();  //Llamar a la función para inicializar los botones.
   initBTN2();
-  contador = 1;
-  pinMode(LEDB, OUTPUT);
+  initBTN3();
+  contador = 0; //Darle un valor inicial a los contadores.
+  segundoContador = 0;
+  pinMode(LEDB, OUTPUT); //Indicar si los pines utilizados funcionarán como entradas o salidas.
   pinMode(LEDY, OUTPUT);
   pinMode(LEDR, OUTPUT);
   pinMode(LEDO, OUTPUT);
 }
 
 void loop() {
+while(segundoContador == 0){ //Ciclo while para determinar el estado decimal
  if(btn1ON){
-  btn1ON = false;
-  Serial.println("Se ha sumado >");
+  btn1ON = false; //Debe indicarse que no estará en valor true si se mantiene presionado.
+  Serial.println("Se ha sumado >"); //Prints para probar e indicar el funcionamiento de los botones.
   Serial.println(contador);
    }
   if(btn2ON){
     btn2ON = false;
     Serial.println("Se ha restado >");
     Serial.println(contador);
+  }
+  if(btn3ON){
+  btn3ON = false;
+  Serial.println("Estado >");
+  Serial.println(segundoContador);
+  }
+  if(contador == 0){ //Ciclos if para mostrar el número indicado a través de los leds.
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
   }
   if(contador == 1){
     digitalWrite(LEDB, HIGH);
@@ -92,20 +119,151 @@ void loop() {
     digitalWrite(LEDR, LOW);
     digitalWrite(LEDO, HIGH);
   }
-  if(contador > 4){
-    contador = 1;
+  if(contador > 4){ //Crear un ciclo entre los valores que puede alcanzar el contador.
+    contador = 0;
   }
-  if(contador < 1){
+  if(contador < 0){
     contador = 4;
+  }
+  if(segundoContador > 1){
+    segundoContador = 0;
+  }
+  }
+  while(segundoContador == 1){ //Ciclo while para determinar el estado binario.
+  if(btn1ON){
+  btn1ON = false;
+  Serial.println("Se ha sumado >");
+  Serial.println(contador);
+   }
+  if(btn2ON){
+    btn2ON = false;
+    Serial.println("Se ha restado >");
+    Serial.println(contador);
+  }
+  if(btn3ON){
+  btn3ON = false;
+  Serial.println("Estado >");
+  Serial.println(segundoContador);
+  }
+  if(contador == 0){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 1){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 2){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 3){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 4){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 5){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 6){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 7){
+    digitalWrite(LEDB, LOW);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 8){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 9){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 10){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 11){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, LOW);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 12){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 13){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, LOW);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador == 14){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, LOW);
+  }
+  if(contador == 15){
+    digitalWrite(LEDB, HIGH);
+    digitalWrite(LEDY, HIGH);
+    digitalWrite(LEDR, HIGH);
+    digitalWrite(LEDO, HIGH);
+  }
+  if(contador > 15){ //Crear un ciclo entre los valores que puede alcanzar el contador.
+    contador = 0;
+  }
+  if(contador < 0){
+    contador = 15;
+  }
+  if(segundoContador > 1){
+    segundoContador = 0;
+  }
   }
   
   } 
 
 void initBTN1(void){
+  //Funciones para denominar a los botones con su tipo de entrada y su interruptor.
   pinMode(BTN1, INPUT_PULLUP);
-  attachInterrupt(BTN1, &BTN1_ISR, FALLING);
+  attachInterrupt(BTN1, &BTN1_ISR, FALLING); //Se indica el pin del botón, su función de interrupción y el tipo de señal donde se interrumpe.
 }
 void initBTN2(void){
   pinMode(BTN2, INPUT_PULLDOWN);
   attachInterrupt(BTN2, &BTN2_ISR, RISING);
+}
+void initBTN3(void){
+  pinMode(BTN3, INPUT);
+  attachInterrupt(BTN3, &BTN3_ISR, RISING);
 }
